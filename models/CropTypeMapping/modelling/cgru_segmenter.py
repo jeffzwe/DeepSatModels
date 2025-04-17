@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from models.CropTypeMapping.modelling.util import initialize_weights
 from models.CropTypeMapping.modelling.cgru import CGRU
+from utils.torch_utils import DEVICE
 
 class CGRUSegmenter(nn.Module):
     """ cgru followed by conv for segmentation output
@@ -27,7 +28,7 @@ class CGRUSegmenter(nn.Module):
         layer_output_list, last_state_list = self.cgru(inputs)
         final_state = last_state_list[0]
         if self.bidirectional:
-            rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).cuda()
+            rev_inputs = torch.tensor(inputs.cpu().detach().numpy()[::-1].copy(), dtype=torch.float32).to(DEVICE)
             rev_layer_output_list, rev_last_state_list = self.cgru(rev_inputs)
             final_state = torch.cat([final_state, rev_last_state_list[0][0]], dim=1)
         scores = self.conv(final_state)

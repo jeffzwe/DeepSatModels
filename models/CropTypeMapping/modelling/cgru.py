@@ -4,6 +4,7 @@ import torch.nn as nn
 from models.CropTypeMapping.modelling.recurrent_norm import RecurrentNorm2d
 from models.CropTypeMapping.modelling.cgru_cell import ConvGRUCell
 from models.CropTypeMapping.modelling.util import initialize_weights
+from utils.torch_utils import DEVICE
 
 class CGRU(nn.Module):
 
@@ -65,7 +66,7 @@ class CGRU(nn.Module):
         for layer_idx in range(self.gru_num_layers):
             # double check that this is right? i.e not resetting every time to 0?
             h = self.init_hidden_state[layer_idx]
-            h = h.expand(input_tensor.size(0), h.shape[1], h.shape[2], h.shape[3]).cuda()
+            h = h.expand(input_tensor.size(0), h.shape[1], h.shape[2], h.shape[3]).to(DEVICE)
             output_inner_layers = []
             
             for t in range(seq_len):

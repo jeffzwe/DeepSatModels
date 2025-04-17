@@ -1,11 +1,11 @@
-from keras.models import Sequential, Model
-from keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
-from keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
-from keras.layers import Conv1D, MaxPooling1D
-from keras import regularizers
-from keras.layers import Bidirectional, TimeDistributed, concatenate
-from keras.backend import reverse
-from keras.engine.input_layer import Input
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import InputLayer, Activation, BatchNormalization, Flatten, Dropout
+from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, ConvLSTM2D, Lambda
+from tensorflow.keras.layers import Conv1D, MaxPooling1D
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Bidirectional, TimeDistributed, concatenate
+from tensorflow.keras.backend import reverse
+from tensorflow.keras.layers import Input
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression

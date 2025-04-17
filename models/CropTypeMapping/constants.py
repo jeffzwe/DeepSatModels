@@ -2,6 +2,7 @@ import numpy as np
 import torch.nn as nn
 import torch
 import os
+from utils.torch_utils import DEVICE
 
 """
 Constants for file paths
@@ -68,16 +69,16 @@ HPS = [INT_POWER_EXP, REAL_POWER_EXP, INT_HP, FLOAT_HP, STRING_HP, BOOL_HP, INT_
 
 # LOSS WEIGHTS
 GHANA_LOSS_WEIGHT = 1 - np.array([.17, .56, .16, .11])
-GHANA_LOSS_WEIGHT = torch.tensor(GHANA_LOSS_WEIGHT, dtype=torch.float32).cuda()
+GHANA_LOSS_WEIGHT = torch.tensor(GHANA_LOSS_WEIGHT, dtype=torch.float32).to(DEVICE)
 
 SSUDAN_LOSS_WEIGHT = 1 - np.array([.72, .11, .10, .07])
-SSUDAN_LOSS_WEIGHT = torch.tensor(SSUDAN_LOSS_WEIGHT, dtype=torch.float32).cuda()
+SSUDAN_LOSS_WEIGHT = torch.tensor(SSUDAN_LOSS_WEIGHT, dtype=torch.float32).to(DEVICE)
 
 TANZ_LOSS_WEIGHT = 1 - np.array([.64, .14, .12, .05, .05])
-TANZ_LOSS_WEIGHT = torch.tensor(TANZ_LOSS_WEIGHT, dtype=torch.float32).cuda()
+TANZ_LOSS_WEIGHT = torch.tensor(TANZ_LOSS_WEIGHT, dtype=torch.float32).to(DEVICE)
           
 GERMANY_LOSS_WEIGHT = 1 - np.array([.02, .01, .07, .05, .03, .01, .02, .01, .01, .04, .01, .01, .27, .10, .01, .03, .32])
-GERMANY_LOSS_WEIGHT = torch.tensor(GERMANY_LOSS_WEIGHT, dtype=torch.float32).cuda()
+GERMANY_LOSS_WEIGHT = torch.tensor(GERMANY_LOSS_WEIGHT, dtype=torch.float32).to(DEVICE)
 
 LOSS_WEIGHT = { 'ghana': GHANA_LOSS_WEIGHT, 
                 'southsudan': SSUDAN_LOSS_WEIGHT,

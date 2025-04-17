@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from utils.torch_utils import DEVICE
 
 from models.CropTypeMapping.modelling.util import initialize_weights
 
@@ -107,8 +108,8 @@ class UNet_Encode(nn.Module):
     def forward(self, x, hres):
 
         # ENCODE
-        x = x.cuda()
-        if hres is not None: hres = hres.cuda()
+        x = x.to(DEVICE)
+        if hres is not None: hres = hres.to(DEVICE)
         if (self.use_planet and self.resize_planet) or (not self.use_planet):
             enc3 = self.enc3(x)
         else:

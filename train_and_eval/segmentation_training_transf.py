@@ -18,20 +18,21 @@ from metrics.numpy_metrics import get_classification_metrics, get_per_class_loss
 from metrics.loss_functions import get_loss
 from utils.summaries import write_mean_summaries, write_class_summaries
 from data import get_loss_data_input
+from tqdm import tqdm
 
 
 def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
 
     def train_step(net, sample, loss_fn, optimizer, device, loss_input_fn):
         optimizer.zero_grad()
-        # print(sample['inputs'].shape)
         outputs = net(sample['inputs'].to(device))
         outputs = outputs.permute(0, 2, 3, 1)
         ground_truth = loss_input_fn(sample, device)
         loss = loss_fn['mean'](outputs, ground_truth)
         loss.backward()
+        total_norm = torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=float('inf'))
         optimizer.step()
-        return outputs, ground_truth, loss
+        return outputs, ground_truth, loss, total_norm
   
     def evaluate(net, evalloader, loss_fn, config):
         num_classes = config['MODEL']['num_classes']
@@ -109,6 +110,8 @@ def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
     start_epoch = 1
     if checkpoint:
         load_from_checkpoint(net, checkpoint, partial_restore=False)
+        
+    print("Device: ", device)
 
     print("current learn rate: ", lr)
 
@@ -136,71 +139,80 @@ def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
     writer = SummaryWriter(save_path)
 
     BEST_IOU = 0
+
     net.train()
     for epoch in range(start_epoch, start_epoch + num_epochs):  # loop over the dataset multiple times
-        for step, sample in enumerate(dataloaders['train']):
-            abs_step = start_global + (epoch - start_epoch) * num_steps_train + step
-            logits, ground_truth, loss = train_step(net, sample, loss_fn, optimizer, device, loss_input_fn=loss_input_fn)
-            if len(ground_truth) == 2:
-                labels, unk_masks = ground_truth
-            else:
-                labels = ground_truth
-                unk_masks = None
-            # print batch statistics ----------------------------------------------------------------------------------#
-            if abs_step % train_metrics_steps == 0:
-                logits = logits.permute(0, 3, 1, 2)
-                batch_metrics = get_mean_metrics(
-                    logits=logits, labels=labels, unk_masks=unk_masks, n_classes=num_classes, loss=loss, epoch=epoch,
-                    step=step)
-                write_mean_summaries(writer, batch_metrics, abs_step, mode="train", optimizer=optimizer)
-                print("abs_step: %d, epoch: %d, step: %5d, loss: %.7f, batch_iou: %.4f, batch accuracy: %.4f, batch precision: %.4f, "
-                      "batch recall: %.4f, batch F1: %.4f" %
-                      (abs_step, epoch, step + 1, loss, batch_metrics['IOU'], batch_metrics['Accuracy'], batch_metrics['Precision'],
-                       batch_metrics['Recall'], batch_metrics['F1']))
-
-            if abs_step % save_steps == 0:
-                if len(local_device_ids) > 1:
-                    torch.save(net.module.state_dict(), "%s/%depoch_%dstep.pth" % (save_path, epoch, abs_step))
+        print(f"\nEpoch {epoch}/{num_epochs}")
+        with tqdm(total=num_steps_train, desc=f"Training Epoch {epoch}") as pbar:
+            
+            for step, sample in enumerate(dataloaders['train']):
+                abs_step = start_global + (epoch - start_epoch) * num_steps_train + step
+                logits, ground_truth, loss, grad_norm = train_step(net, sample, loss_fn, optimizer, device, loss_input_fn=loss_input_fn)
+                
+                # Log individual gradient norm to TensorBoard
+                writer.add_scalar('training_gradient_norm', grad_norm, abs_step)
+                
+                if len(ground_truth) == 2:
+                    labels, unk_masks = ground_truth
                 else:
-                    torch.save(net.state_dict(), "%s/%depoch_%dstep.pth" % (save_path, epoch, abs_step))
+                    labels = ground_truth
+                    unk_masks = None
+                # print batch statistics ----------------------------------------------------------------------------------#
+                if abs_step % train_metrics_steps == 0:
+                    logits = logits.permute(0, 3, 1, 2)
+                    batch_metrics = get_mean_metrics(
+                        logits=logits, labels=labels, unk_masks=unk_masks, n_classes=num_classes, loss=loss, epoch=epoch,
+                        step=step)
+                    write_mean_summaries(writer, batch_metrics, abs_step, mode="train", optimizer=optimizer)
+                    print("abs_step: %d, epoch: %d, step: %5d, loss: %.7f, batch_iou: %.4f, batch accuracy: %.4f, batch precision: %.4f, "
+                        "batch recall: %.4f, batch F1: %.4f" %
+                        (abs_step, epoch, step + 1, loss, batch_metrics['IOU'], batch_metrics['Accuracy'], batch_metrics['Precision'],
+                        batch_metrics['Recall'], batch_metrics['F1']))
 
-            # evaluate model ------------------------------------------------------------------------------------------#
-            if abs_step % eval_steps == 0:
-                eval_metrics = evaluate(net, dataloaders['eval'], loss_fn, config)
-                if eval_metrics[1]['macro']['IOU'] > BEST_IOU:
+                if abs_step % save_steps == 0:
                     if len(local_device_ids) > 1:
-                        torch.save(net.module.state_dict(), "%s/best.pth" % (save_path))
+                        torch.save(net.module.state_dict(), "%s/%depoch_%dstep.pth" % (save_path, epoch, abs_step))
                     else:
-                        torch.save(net.state_dict(), "%s/best.pth" % (save_path))
-                    BEST_IOU = eval_metrics[1]['macro']['IOU']
+                        torch.save(net.state_dict(), "%s/%depoch_%dstep.pth" % (save_path, epoch, abs_step))
+
+                # evaluate model ------------------------------------------------------------------------------------------#
+                if abs_step % eval_steps == 0:
+                    eval_metrics = evaluate(net, dataloaders['eval'], loss_fn, config)
+                    if eval_metrics[1]['macro']['IOU'] > BEST_IOU:
+                        if len(local_device_ids) > 1:
+                            torch.save(net.module.state_dict(), "%s/best.pth" % (save_path))
+                        else:
+                            torch.save(net.state_dict(), "%s/best.pth" % (save_path))
+                        BEST_IOU = eval_metrics[1]['macro']['IOU']
 
 
-                write_mean_summaries(writer, eval_metrics[1]['micro'], abs_step, mode="eval_micro", optimizer=None)
-                write_mean_summaries(writer, eval_metrics[1]['macro'], abs_step, mode="eval_macro", optimizer=None)
-                write_class_summaries(writer, [eval_metrics[0], eval_metrics[1]['class']], abs_step, mode="eval",
-                                      optimizer=None)
-                net.train()
+                    write_mean_summaries(writer, eval_metrics[1]['micro'], abs_step, mode="eval_micro", optimizer=None)
+                    write_mean_summaries(writer, eval_metrics[1]['macro'], abs_step, mode="eval_macro", optimizer=None)
+                    write_class_summaries(writer, [eval_metrics[0], eval_metrics[1]['class']], abs_step, mode="eval",
+                                        optimizer=None)
+                    net.train()
+                pbar.update(1)
 
-        scheduler.step_update(abs_step)
+            scheduler.step_update(abs_step)
 
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-    parser.add_argument('--config', help='configuration (.yaml) file to use')
+    parser.add_argument('--config_file', help='configuration (.yaml) file to use')
     parser.add_argument('--device', default='0,1', type=str,
                          help='gpu ids to use')
     parser.add_argument('--lin', action='store_true',
                          help='train linear classifier only')
 
     args = parser.parse_args()
-    config_file = args.config
+    config_file = args.config_file
     print(args.device)
     device_ids = [int(d) for d in args.device.split(',')]
     lin_cls = args.lin
 
-    device = get_device(device_ids, allow_cpu=False)
+    device = get_device(device_ids, allow_cpu=True)  # Allow CPU for apple silicon compatibility
 
     config = read_yaml(config_file)
     config['local_device_ids'] = device_ids

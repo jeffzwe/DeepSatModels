@@ -8,6 +8,7 @@ import numpy as np
 from models.CropTypeMapping.constants import *
 from models.CropTypeMapping.modelling.recurrent_norm import RecurrentNorm2d
 from models.CropTypeMapping.modelling.util import initialize_weights
+from utils.torch_utils import DEVICE
 
 class ConvLSTMCell(nn.Module):
     """
@@ -65,7 +66,7 @@ class ConvLSTMCell(nn.Module):
         
         h_cur, c_cur = cur_state
         # BN over the outputs of these convs
-        combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.cuda()), timestep)
+        combined_conv = self.h_norm(self.h_conv(h_cur), timestep) + self.input_norm(self.input_conv(input_tensor.to(DEVICE)), timestep)
  
         cc_i, cc_f, cc_o, cc_g = torch.split(combined_conv, self.hidden_dim, dim=1) 
         i = torch.sigmoid(cc_i)

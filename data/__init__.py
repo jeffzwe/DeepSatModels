@@ -1,3 +1,4 @@
+import os
 import torch
 from data.MTLCC.dataloader import get_dataloader as get_mtlcc_dataloader
 from data.MTLCC.data_transforms import MTLCC_transform
@@ -23,7 +24,7 @@ def get_dataloaders(config):
     
     # TRAIN data -------------------------------------------------------------------------------------------------------
     train_config['base_dir'] = DATASET_INFO[train_config['dataset']]['basedir']
-    train_config['paths'] = DATASET_INFO[train_config['dataset']]['paths_train']
+    train_config['paths'] = os.path.join(train_config['base_dir'], DATASET_INFO[train_config['dataset']]['paths_train'])
     if train_config['dataset'] == 'MTLCC':
         dataloaders['train'] = get_mtlcc_dataloader(
             paths_file=train_config['paths'], root_dir=train_config['base_dir'],
@@ -42,7 +43,7 @@ def get_dataloaders(config):
 
     # EVAL data --------------------------------------------------------------------------------------------------------
     eval_config['base_dir'] = DATASET_INFO[eval_config['dataset']]['basedir']
-    eval_config['paths'] = DATASET_INFO[eval_config['dataset']]['paths_eval']
+    eval_config['paths'] = os.path.join(eval_config['base_dir'], DATASET_INFO[eval_config['dataset']]['paths_eval'])
     if eval_config['dataset'] == 'MTLCC':
         dataloaders['eval'] = get_mtlcc_dataloader(
             paths_file=eval_config['paths'], root_dir=eval_config['base_dir'],

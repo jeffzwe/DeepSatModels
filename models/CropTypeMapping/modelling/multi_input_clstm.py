@@ -6,7 +6,7 @@ from models.CropTypeMapping.modelling.clstm_segmenter import CLSTMSegmenter
 from models.CropTypeMapping.modelling.unet import UNet, UNet_Encode, UNet_Decode
 from models.CropTypeMapping.modelling.attention import ApplyAtt, attn_or_avg
 from pprint import pprint
-
+from utils.torch_utils import DEVICE
 import time
 
 class MI_CLSTM(nn.Module):
@@ -154,7 +154,7 @@ class MI_CLSTM(nn.Module):
                     reweighted = attn_or_avg(self.attention[sat], self.avg_hidden_states, crnn_output_fwd, crnn_output_rev, self.bidirectional, lengths)
                  
                     # Apply final conv
-                    reweighted = reweighted.cuda()
+                    reweighted = reweighted.to(DEVICE)
                     pred_enc = self.finalconv[sat](reweighted) if self.finalconv[sat] is not None else reweighted
                     preds.append(self.decs[sat](pred_enc, enc4_feats, enc3_feats))
 

@@ -6,6 +6,7 @@ from torchvision import transforms, utils
 from copy import deepcopy
 import random
 from utils.config_files_utils import get_params_values
+from utils.torch_utils import DEVICE
 
 
 original_label_dict = {0: "unknown", 1: "sugar_beet", 2: "summer_oat", 3: "meadow", 5: "rape", 8: "hop",
@@ -84,14 +85,14 @@ class ToTensor(object):
             sample = {"x10": x10, "x20": x20, "x60": x60, "day": doy, "year": year, "labels": labels}
             return sample
         # else:
-        sample['x10'] = torch.tensor(sample['x10']).type(torch.float32)
-        sample['x20'] = torch.tensor(sample['x20']).type(torch.float32)
-        sample['x60'] = torch.tensor(sample['x60']).type(torch.float32)
-        sample['day'] = torch.tensor(sample['day']).type(torch.float32)
-        sample['year'] = torch.tensor(sample['year']).type(torch.float32)
+        sample['x10'] = torch.tensor(sample['x10']).to(torch.float32)
+        sample['x20'] = torch.tensor(sample['x20']).to(torch.float32)
+        sample['x60'] = torch.tensor(sample['x60']).to(torch.float32)
+        sample['day'] = torch.tensor(sample['day']).to(torch.float32)
+        sample['year'] = torch.tensor(sample['year']).to(torch.float32)
         sample['labels'] = torch.unsqueeze(
             torch.from_numpy(sample['labels'].astype(np.int64)),
-            dim=-1)
+            dim=-1).to(DEVICE)
         return sample
 
 

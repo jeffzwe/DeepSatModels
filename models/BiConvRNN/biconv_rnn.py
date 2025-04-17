@@ -5,6 +5,7 @@ from models.BiConvRNN.conv_lstm import ConvLSTMCell, ConvLSTM
 from models.BiConvRNN.conv_gru import ConvGRU
 import torch.nn.functional as F
 from utils.config_files_utils import get_params_values
+from utils.torch_utils import DEVICE
 
 
 class BiRNNSequentialEncoderClassifier(torch.nn.Module):
@@ -18,7 +19,7 @@ class BiRNNSequentialEncoderClassifier(torch.nn.Module):
                  shape_pattern="NCTHW", nclasses=8, bias=True, gpu_id=None, temp_model="ConvGRU"):
         super(BiRNNSequentialEncoderClassifier, self).__init__()
         self.net = BiRNNSequentialEncoder(input_size, input_dim, conv3d_hidden_dim, rnn_hidden_dim, kernel_size,
-                                           shape_pattern, nclasses, bias, gpu_id, temp_model)
+                                           shape_pattern, nclasses, bias, gpu_id, temp_model).to(DEVICE)
 
     def forward(self, inputs, unk_masks, seq_lengths):
         out = self.net(inputs, seq_lengths)
@@ -123,10 +124,10 @@ class BiRNNSequentialEncoder(torch.nn.Module):
         inputs_forward, inputs_backward, seq_lengths = inputs
 
         # Desired shape for tensor in NCTHW
-        if self.shape_pattern is "NTHWC":
+        if self.shape_pattern == "NTHWC":
             inputs_forward = inputs_forward.permute(0, 4, 1, 2, 3)
             inputs_backward = inputs_backward.permute(0, 4, 1, 2, 3)
-        elif self.shape_pattern is "NTCHW":
+        elif self.shape_pattern == "NTCHW":
             # (b x t x c x h x w) -> (b x c x t x h x w)
             inputs_forward = inputs_forward.permute(0, 2, 1, 3, 4)
             inputs_backward = inputs_backward.permute(0, 2, 1, 3, 4)

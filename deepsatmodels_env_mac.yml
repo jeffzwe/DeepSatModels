@@ -1,0 +1,107 @@
+name: deepsatmodels
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - blas=1.0=openblas
+  - ca-certificates
+  - certifi
+  - cloudpickle
+  - cycler
+  - cython
+  - cytoolz
+  - dask-core
+  - decorator
+  - freetype
+  - imagecodecs-lite
+  - imageio
+  - joblib
+  - jpeg
+  - kiwisolver
+  - lcms2
+  - libedit
+  - libffi
+  - libpng
+  - libtiff
+  - matplotlib
+  - matplotlib-base
+  - networkx
+  - ninja
+  - numpy
+  - olefile
+  - openssl
+  - pandas
+  - pillow
+  - pip
+  - pycocotools
+  - pyparsing
+  - python
+  - python-dateutil
+  - python_abi
+  - pytz
+  - pywavelets
+  - pyyaml
+  - scikit-image
+  - scikit-learn
+  - setuptools
+  - six
+  - sqlite
+  - threadpoolctl
+  - tifffile
+  - tk
+  - toolz
+  - tornado
+  - wheel
+  - zlib
+  - pip:
+      - absl-py
+      - addict
+      - astunparse
+      - cachetools
+      # - chainer
+      # - chainercv
+      - chardet
+      - dataclasses
+      - filelock
+      - future
+      - gast
+      - gdown
+      - google-auth
+      - google-auth-oauthlib
+      - google-pasta
+      - grpcio
+      - h5py
+      - idna
+      # - keras
+      # - keras-preprocessing
+      - markdown
+      - mmcv
+      - nibabel
+      - oauthlib
+      - opencv-python
+      - opt-einsum
+      - packaging
+      - protobuf
+      - pyasn1
+      - pyasn1-modules
+      - pypng
+      - pysocks
+      - requests
+      - requests-oauthlib
+      - rsa
+      - scipy
+      - tensorboard
+      - tensorboard-plugin-wit
+      - tensorflow-macos  # Use Apple's TensorFlow for ARM Macs
+      - tensorflow-metal  # Metal backend for GPU acceleration on macOS
+      - tensorflow-estimator
+      - termcolor
+      # - torchfcn
+      - torch
+      - tqdm
+      - typing-extensions
+      - urllib3
+      - werkzeug
+      - wrapt
+      - yapf
+      - einops

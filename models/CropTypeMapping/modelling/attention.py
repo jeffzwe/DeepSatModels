@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from utils.torch_utils import DEVICE
 
 def attn_or_avg(attention, avg_hidden_states, layer_outputs, rev_layer_outputs, bidirectional, lengths=None):
     if (attention is None) or (attention(layer_outputs) is None):
@@ -100,7 +101,7 @@ class SelfAtt(nn.Module):
         keys = self.w_k(hidden_states)
         values = self.w_v(hidden_states)
         
-        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys, 0, 1)) / torch.sqrt(torch.tensor(self.dk, dtype=torch.float).cuda())), values)      
+        attn = torch.mm(self.softmax(torch.mm(queries, torch.transpose(keys, 0, 1)) / torch.sqrt(torch.tensor(self.dk, dtype=torch.float).to(DEVICE))), values)      
         attn = attn.view(nb, nt, nr, nc, -1)
         attn = attn.permute(0, 1, 4, 2, 3).contiguous() 
         return attn

@@ -6,6 +6,7 @@ from einops.layers.torch import Rearrange
 from models.TSViT.module import Attention, PreNorm, FeedForward
 import numpy as np
 from utils.config_files_utils import get_params_values
+from utils.torch_utils import DEVICE
 
 
 class Transformer(nn.Module):
@@ -21,8 +22,8 @@ class Transformer(nn.Module):
 
     def forward(self, x):
         for attn, ff in self.layers:
-            x = attn(x) + x
-            x = ff(x) + x
+            x = attn(x) * 0.1 + x
+            x = ff(x) * 0.1 + x
         return self.norm(x)
 
 
@@ -397,10 +398,14 @@ class TSViT(nn.Module):
             Rearrange('b t c (h p1) (w p2) -> (b h w) t (p1 p2 c)', p1=self.patch_size, p2=self.patch_size),
             nn.Linear(patch_dim, self.dim),)
         self.to_temporal_embedding_input = nn.Linear(366, self.dim)
+        nn.init.xavier_uniform_(self.to_temporal_embedding_input.weight)
+        nn.init.zeros_(self.to_temporal_embedding_input.bias)
         self.temporal_token = nn.Parameter(torch.randn(1, self.num_classes, self.dim))
+        nn.init.normal_(self.temporal_token, std=0.02)
         self.temporal_transformer = Transformer(self.dim, self.temporal_depth, self.heads, self.dim_head,
                                                 self.dim * self.scale_dim, self.dropout)
         self.space_pos_embedding = nn.Parameter(torch.randn(1, num_patches, self.dim))
+        nn.init.normal_(self.space_pos_embedding, std=0.02)
         self.space_transformer = Transformer(self.dim, self.spatial_depth, self.heads, self.dim_head, self.dim * self.scale_dim, self.dropout)
         self.dropout = nn.Dropout(self.emb_dropout)
         self.mlp_head = nn.Sequential(
@@ -571,9 +576,9 @@ if __name__ == "__main__":
 
     x = torch.rand((3, 16, res, res, 14))
 
-    # model = TViT(model_config).cuda()
-    # model = STViT(model_config)#.cuda()
-    # model = TSViT_global_attention_spatial_encoder(model_config)#.cuda()
+    # model = TViT(model_config).to(DEVICE)
+    # model = STViT(model_config)#.to(DEVICE)
+    # model = TSViT_global_attention_spatial_encoder(model_config)#.to(DEVICE)
     model = TSViT_single_token(model_config)
 
     parameters = filter(lambda p: p.requires_grad, model.parameters())

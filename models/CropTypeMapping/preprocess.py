@@ -15,6 +15,7 @@ from constants import *
 from util import *
 import os
 import random
+from utils.torch_utils import DEVICE
 
 
 def normalization(grid, satellite, country):
@@ -65,7 +66,7 @@ def maskForLoss(y_pred, y_true):
     """
     loss_mask = torch.sum(y_true, dim=1).type(torch.LongTensor)
 
-    loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).cuda()
+    loss_mask_repeat = loss_mask.unsqueeze(1).repeat(1,y_pred.shape[1]).type(torch.FloatTensor).to(DEVICE)
     y_pred = y_pred * loss_mask_repeat
    
     # take argmax to get true values from one-hot encoding 
@@ -662,5 +663,5 @@ def vectorize(home, country, data_set, satellite, ylabel_dir, band_order= 'bytim
             output_fname = "_".join([data_set, 'raw', satellite_original, band_order, 'y'+data_type, 'g'+str(len(gridded_fnames))+'.npy'])
             np.save(os.path.join(home, country, 'pixel_arrays', data_set, 'raw', satellite_original, output_fname), y_total3types[data_type])
    
-    return [X_total3types, y_total3types]  
+    return [X_total3types, y_total3types]
 

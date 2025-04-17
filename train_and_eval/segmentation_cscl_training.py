@@ -184,7 +184,7 @@ if __name__ == "__main__":
     config_file = opt.config_file
 
     device_ids = [int(i) for i in gpu_ids if i.isnumeric()]
-    device = get_device(device_ids, allow_cpu=False)
+    device = get_device(device_ids, allow_cpu=True)  # Allow CPU for M1 compatibility
 
     config = read_yaml(config_file)
     config['local_device_ids'] = device_ids

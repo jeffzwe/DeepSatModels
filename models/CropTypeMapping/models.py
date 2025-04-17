@@ -10,7 +10,7 @@ given by:
 Changes to allow this are still in progess
 """
 from torchvision import models
-import torchfcn
+# import torchfcn
 
 from models.CropTypeMapping.constants import *
 from models.CropTypeMapping.modelling.baselines import make_rf_model
@@ -25,6 +25,7 @@ from models.CropTypeMapping.modelling.only_clstm_mi import ONLY_CLSTM_MI
 from models.CropTypeMapping.modelling.attention import ApplyAtt, attn_or_avg
 
 from utils.config_files_utils import get_params_values
+from utils.torch_utils import DEVICE
 from models.LocalSelfAttention.cscl import ContextSelfSimilarity
 
 
@@ -222,6 +223,7 @@ def make_MI_CLSTM_model(num_bands,
                      grid_size,
                      main_attn_type,
                      attn_dims)
+    model = model.to(DEVICE)
     return model
 
 def make_MI_only_CLSTM_model(num_bands, crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, 
@@ -231,6 +233,7 @@ def make_MI_only_CLSTM_model(num_bands, crnn_input_size, hidden_dims, lstm_kerne
     model = ONLY_CLSTM_MI(num_bands, crnn_input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size,
                           lstm_num_layers, avg_hidden_states, num_classes, bidirectional, max_timesteps,
                           satellites, main_attn_type, attn_dims)
+    model = model.to(DEVICE)
     return model
 
 def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, avg_hidden_states, main_attn_type, attn_dims):
@@ -250,32 +253,33 @@ def make_bidir_clstm_model(input_size, hidden_dims, lstm_kernel_sizes, conv_kern
     """
     model = CLSTMSegmenter(input_size, hidden_dims, lstm_kernel_sizes, conv_kernel_size, lstm_num_layers, num_classes, bidirectional, 
                            with_pred=True, avg_hidden_states=avg_hidden_states, attn_type=main_attn_type, attn_dims=attn_dims) 
+    model = model.to(DEVICE)
     return model
 
 
-def make_fcn_model(n_class, n_channel, freeze=True):
-    """ Defines a FCN8s model
-    Args: 
-      n_class - (int) number of classes to predict
-      n_channel - (int) number of channels in input
-      freeze - (bool) whether to use pre-trained weights
-                TODO: unfreeze after x epochs of training
+# def make_fcn_model(n_class, n_channel, freeze=True):
+#     """ Defines a FCN8s model
+#     Args: 
+#       n_class - (int) number of classes to predict
+#       n_channel - (int) number of channels in input
+#       freeze - (bool) whether to use pre-trained weights
+#                 TODO: unfreeze after x epochs of training
 
-    Returns: 
-      returns the model!
-    """
-    ## load pretrained model
-    fcn8s_pretrained_model=torch.load(torchfcn.models.FCN8s.download())
-    fcn8s = FCN8(n_class, n_channel)
-    fcn8s.load_state_dict(fcn8s_pretrained_model,strict=False)
+#     Returns: 
+#       returns the model!
+#     """
+#     ## load pretrained model
+#     fcn8s_pretrained_model=torch.load(torchfcn.models.FCN8s.download())
+#     fcn8s = FCN8(n_class, n_channel)
+#     fcn8s.load_state_dict(fcn8s_pretrained_model,strict=False)
     
-    if freeze:
-        ## Freeze the parameter you do not want to tune
-        for param in fcn8s.parameters():
-            if torch.sum(param==0)==0:
-                param.requires_grad = False
+#     if freeze:
+#         ## Freeze the parameter you do not want to tune
+#         for param in fcn8s.parameters():
+#             if torch.sum(param==0)==0:
+#                 param.requires_grad = False
     
-    return fcn8s
+#     return fcn8s
 
 def make_UNet_model(n_class, num_bands_dict, late_feats_for_fcn=False, pretrained=True, use_planet=False, resize_planet=False):
     """ Defines a U-Net model
@@ -303,7 +307,7 @@ def make_UNet_model(n_class, num_bands_dict, late_feats_for_fcn=False, pretraine
         model.unet_encode.enc4.encode[3] = pre_trained_features[7] # 128 in, 128 out
         model.unet_encode.center[0] = pre_trained_features[10]     # 128 in, 256 out
         
-    model = model.cuda()
+    model = model.to(DEVICE)
     return model
 
 def make_UNetEncoder_model(num_bands_dict, use_planet=True, resize_planet=False, pretrained=True):
@@ -319,12 +323,12 @@ def make_UNetEncoder_model(num_bands_dict, use_planet=True, resize_planet=False,
         model.enc4.encode[3] = pre_trained_features[7] # 128 in, 128 out
         model.center[0] = pre_trained_features[10]     # 128 in, 256 out
 
-    model = model.cuda()
+    model = model.to(DEVICE)
     return model
 
 def make_UNetDecoder_model(n_class, late_feats_for_fcn, use_planet, resize_planet):
     model = UNet_Decode(n_class, late_feats_for_fcn, use_planet, resize_planet)
-    model = model.cuda()
+    model = model.to(DEVICE)
     return model
 
 def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_name, 
@@ -359,7 +363,7 @@ def make_fcn_clstm_model(country, fcn_input_size, crnn_input_size, crnn_model_na
                      conv_kernel_size, lstm_num_layers, avg_hidden_states, num_classes, bidirectional, pretrained, 
                      early_feats, use_planet, resize_planet, num_bands_dict, main_crnn, main_attn_type, attn_dims, 
                      enc_crnn, enc_attn, enc_attn_type)
-    model = model.cuda()
+    model = model.to(DEVICE)
 
     return model
 
@@ -374,7 +378,7 @@ def make_UNet3D_model(n_class, n_channel, timesteps, dropout):
     """
 
     model = UNet3D(n_channel, n_class, timesteps, dropout)
-    model = model.cuda()
+    model = model.to(DEVICE)
     return model
 
 def get_model(model_name, **kwargs):
@@ -561,6 +565,6 @@ if __name__ == "__main__":
     config = read_yaml(config_file)
     config['local_device_ids'] = device_ids
 
-    net = FCN_CRNN(config['MODEL']).cuda()
+    net = FCN_CRNN(config['MODEL']).to(device)
 
     print(net(torch.rand(2, 16, 24, 24, 15)).shape)

@@ -9,6 +9,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch
 import preprocess
+from utils.torch_utils import DEVICE
 
 from constants import *
 
@@ -39,7 +40,7 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
                       can be calculated over many batches
     """ 
     y_true = preprocess.reshapeForLoss(y_true)
-    num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+    num_examples = torch.sum(y_true, dtype=torch.float32).to(DEVICE)
     
     bs, classes, rows, cols = y_pred.shape
     
@@ -48,7 +49,7 @@ def focal_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_sca
     y_confidence, _ = torch.sort(y_pred, dim=1, descending=True)
     y_confidence = y_confidence[:, 0] - y_confidence[:, 1]
     y_confidence = y_confidence.view([bs, rows, cols]).detach().cpu().numpy() * 255
-    y_true = y_true.type(torch.LongTensor).cuda()
+    y_true = y_true.type(torch.LongTensor).to(DEVICE)
     
     if loss_weight:
         loss_fn = nn.NLLLoss(weight = LOSS_WEIGHT[country] ** weight_scale,reduction="none")
@@ -99,7 +100,7 @@ def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_s
 
     """
     y_true = preprocess.reshapeForLoss(y_true)
-    num_examples = torch.sum(y_true, dtype=torch.float32).cuda()
+    num_examples = torch.sum(y_true, dtype=torch.float32).to(DEVICE)
     y_pred = preprocess.reshapeForLoss(y_pred)
     y_pred, y_true = preprocess.maskForLoss(y_pred, y_true)
    
@@ -108,7 +109,7 @@ def mask_ce_loss(y_true, y_pred, reduction, country, loss_weight=False, weight_s
     else:
         loss_fn = nn.NLLLoss(reduction="none") 
 
-    total_loss = torch.sum(loss_fn(y_pred, y_true.cuda()))
+    total_loss = torch.sum(loss_fn(y_pred, y_true.to(DEVICE)))
    
     if num_examples == 0:
         print("WARNING: NUMBER OF EXAMPLES IS 0")

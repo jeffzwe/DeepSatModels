@@ -4,6 +4,7 @@ import torch.nn as nn
 from models.CropTypeMapping.modelling.recurrent_norm import RecurrentNorm2d
 from models.CropTypeMapping.modelling.clstm_cell import ConvLSTMCell
 from models.CropTypeMapping.modelling.util import initialize_weights
+from utils.torch_utils import DEVICE
 
 class CLSTM(nn.Module):
 
@@ -74,8 +75,8 @@ class CLSTM(nn.Module):
             # double check that this is right? i.e not resetting every time to 0?
             #print(self.init_hidden_state)
             h, c = self.init_hidden_state[layer_idx], self.init_cell_state[layer_idx]
-            h = h.expand(input_tensor.size(0), h.shape[1], h.shape[2], h.shape[3]).cuda()
-            c = c.expand(input_tensor.size(0), c.shape[1], c.shape[2], c.shape[3]).cuda()
+            h = h.expand(input_tensor.size(0), h.shape[1], h.shape[2], h.shape[3]).to(DEVICE)
+            c = c.expand(input_tensor.size(0), c.shape[1], c.shape[2], c.shape[3]).to(DEVICE)
             output_inner_layers = []
             
             for t in range(seq_len):

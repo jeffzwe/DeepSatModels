@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-
+from utils.torch_utils import DEVICE
 
 class FCN8(nn.Module):
     '''
@@ -85,7 +85,7 @@ class FCN8(nn.Module):
                 m.weight.data.copy_(initial_weight)
                 
     def forward(self, x):
-        h = x.cuda()
+        h = x.to(DEVICE)
         h = self.relu1_1(self.conv1_1_croptype(h))
         h = self.relu1_2(self.conv1_2(h))
         h = self.pool1(h)

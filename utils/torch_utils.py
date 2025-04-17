@@ -4,6 +4,8 @@ import glob
 import sys
 
 
+DEVICE = None
+
 def load_from_checkpoint(net, checkpoint, partial_restore=False, device=None):
     
     assert checkpoint is not None, "no path provided for checkpoint, value is None"
@@ -46,11 +48,14 @@ def get_net_trainable_params(net):
     
     
 def get_device(device_ids, allow_cpu=False):
+    global DEVICE
     if torch.cuda.is_available():
-        device = torch.device("cuda:%d" % device_ids[0])
+        DEVICE = torch.device("cuda:%d" % device_ids[0])
+    elif torch.backends.mps.is_available():
+        DEVICE = torch.device("mps")
     elif allow_cpu:
-        device = torch.device("cpu")
+        DEVICE = torch.device("cpu")
     else:
         sys.exit("No allowed device is found")
-    return device
+    return DEVICE
 

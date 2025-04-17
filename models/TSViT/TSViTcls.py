@@ -5,6 +5,7 @@ from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from models.TSViT.module import Attention, PreNorm, FeedForward
 import numpy as np
+from utils.torch_utils import DEVICE
 
 
 class Transformer(nn.Module):
@@ -111,10 +112,11 @@ if __name__ == "__main__":
     train_config = {'dataset': "psetae_repl_2018_100_3", 'label_map': "labels_20k2k", 'max_seq_len': 16, 'batch_size': 5,
                     'extra_data': [], 'num_workers': 4}
 
-    model = TSViTcls(model_config).cuda()
+    
+    model = TSViTcls(model_config).to(DEVICE)
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
     print('Trainable Parameters: %.3fM' % parameters)
-    img = torch.rand((2, 16, 14, res, res)).cuda()
+    img = torch.rand((2, 16, 14, res, res)).to(DEVICE)
     out = model(img)
     print("Shape of out :", out.shape)  # [B, num_classes]

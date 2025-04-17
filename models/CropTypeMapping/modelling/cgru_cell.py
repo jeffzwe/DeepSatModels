@@ -8,6 +8,7 @@ import numpy as np
 from models.CropTypeMapping.constants import *
 from models.CropTypeMapping.modelling.recurrent_norm import RecurrentNorm2d
 from models.CropTypeMapping.modelling.util import initialize_weights
+from utils.torch_utils import DEVICE
 
 class ConvGRUCell(nn.Module):
     """
@@ -72,7 +73,7 @@ class ConvGRUCell(nn.Module):
 
     def forward(self, input_tensor, cur_state, timestep):
         # TODO: should not have to call cuda here, figure out where this belongs
-        input_tensor.cuda()
+        input_tensor.to(DEVICE)
         # BN over the outputs of these convs
         
         combined_conv = self.h_norm(self.h_conv(cur_state), timestep) + self.input_norm(self.input_conv(input_tensor), timestep)

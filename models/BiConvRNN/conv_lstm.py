@@ -63,7 +63,7 @@ class ConvLSTMCell(nn.Module):
         vars = (Variable(torch.zeros(batch_size, self.hidden_dim, self.height, self.width)),
                 Variable(torch.zeros(batch_size, self.hidden_dim, self.height, self.width)))
         if self.device.type == 'cuda':
-            vars = (v.cuda() for v in vars)  # to(self.device)
+            vars = (v.to(self.device) for v in vars)
         return vars
 
 
@@ -123,9 +123,9 @@ class ConvLSTM(nn.Module):
         """
 
         # Desired shape for tensor in NTCHW
-        if self.shape_pattern is "NTHWC":
+        if self.shape_pattern == "NTHWC":
             input_tensor = input_tensor.permute(0, 1, 4, 2, 3)
-        elif self.shape_pattern is "NCTHW":
+        elif self.shape_pattern == "NCTHW":
             input_tensor = input_tensor.permute(0, 2, 1, 3, 4)
 
         # Implement stateful ConvLSTM

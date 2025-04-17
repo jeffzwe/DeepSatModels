@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+from utils.torch_utils import DEVICE
 
 
 class ConvGRUCell(nn.Module):
@@ -61,7 +62,7 @@ class ConvGRUCell(nn.Module):
     def init_hidden(self, batch_size):
         vars = Variable(torch.zeros(batch_size, self.hidden_dim, self.height, self.width))
         if self.device.type == 'cuda':
-            vars = vars.cuda()
+            vars = vars.to(DEVICE)
         return vars
 
 
@@ -122,9 +123,9 @@ class ConvGRU(nn.Module):
         # input_tensor = inputs["inputs"]
 
         # Desired shape for tensor in NTCHW
-        if self.shape_pattern is "NTHWC":
+        if self.shape_pattern == "NTHWC":
             input_tensor = input_tensor.permute(0, 1, 4, 2, 3)
-        elif self.shape_pattern is "NCTHW":
+        elif self.shape_pattern == "NCTHW":
             input_tensor = input_tensor.permute(0, 2, 1, 3, 4)
 
         # Implement stateful ConvLSTM

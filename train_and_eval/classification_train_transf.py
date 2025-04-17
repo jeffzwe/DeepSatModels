@@ -1,6 +1,7 @@
 import sys
 import os
 sys.path.insert(0, os.getcwd())
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import argparse
 import torch
 import torch.nn as nn
@@ -17,6 +18,7 @@ from metrics.torch_metrics import get_mean_metrics
 from metrics.numpy_metrics import get_classification_metrics, get_per_class_loss
 from metrics.loss_functions import get_loss
 from utils.summaries import write_mean_summaries, write_class_summaries
+from tqdm import tqdm
 
 
 def mIou(y_true, y_pred, n_classes):
@@ -47,20 +49,20 @@ def mIou(y_true, y_pred, n_classes):
 
     return iou / n_observed
 
-
-def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
-
-    def train_step(net, sample, loss_fn, optimizer, device):
+def train_step(net, sample, loss_fn, optimizer, device):
         optimizer.zero_grad()
-        print(sample['inputs'].shape)
+        # print(sample['inputs'].shape)
         outputs = net(sample['inputs'].to(torch.float32).to(device))
         ground_truth = sample['labels'][:, center, center, 0].to(torch.int64).to(device)
+        # print(f"Predicted shape: {outputs.shape}")
+        # print(f"Label shape: { sample['labels'].shape}")
+        # print(f"Ground truth shape: {ground_truth.shape}")
         loss = loss_fn['mean'](outputs, ground_truth)
         loss.backward()
         optimizer.step()
         return outputs, ground_truth, loss
-
-    def evaluate(net, evalloader, loss_fn, config):
+    
+def evaluate(net, evalloader, loss_fn, config):
         num_classes = config['MODEL']['num_classes']
         Neval = len(evalloader)
 
@@ -78,8 +80,8 @@ def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
 
                 _, predicted = torch.max(logits.data, -1)
 
-                predicted_all.append(predicted.view(-1).cpu().numpy())
-                labels_all.append(sample['labels'][:, center, center, 0].view(-1).to(torch.int64).cpu().numpy())
+                predicted_all.append(predicted.view(-1).cpu().detach().numpy())
+                labels_all.append(sample['labels'][:, center, center, 0].view(-1).to(torch.int64).cpu().detach().numpy())
 
                 # if step > 5:
                 #    break
@@ -113,6 +115,8 @@ def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
                            "Recall": class_recall,
                            "F1": class_F1, "IOU": class_IOU}}]
 
+
+def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
 
     num_classes = config['MODEL']['num_classes']
     num_epochs = config['SOLVER']['num_epochs']
@@ -158,53 +162,85 @@ def train_and_evaluate(net, dataloaders, config, device, lin_cls=False):
     BEST_IOU = 0
     net.train()
     for epoch in range(start_epoch, start_epoch + num_epochs):  # loop over the dataset multiple times
-        for step, sample in enumerate(dataloaders['train']):
+        print(f"\nEpoch {epoch}/{num_epochs}")
+        with tqdm(total=num_steps_train, desc=f"Training Epoch {epoch}") as pbar:
+            
+            for step, sample in enumerate(dataloaders['train']):
 
-            abs_step = start_global + (epoch - start_epoch) * num_steps_train + step
+                abs_step = start_global + (epoch - start_epoch) * num_steps_train + step
 
-            logits, labels, loss = train_step(net, sample, loss_fn, optimizer, device)
+                logits, labels, loss = train_step(net, sample, loss_fn, optimizer, device)
 
-            if abs_step % train_metrics_steps == 0:
-                batch_metrics = get_mean_metrics(
-                    logits=logits, labels=labels, unk_masks=None, n_classes=num_classes, loss=loss, epoch=epoch,
-                    step=step)
-                write_mean_summaries(writer, batch_metrics, abs_step, mode="train", optimizer=optimizer)
-                print("abs_step: %d, epoch: %d, step: %5d, loss: %.7f, batch_iou: %.4f, batch accuracy: %.4f, batch precision: %.4f, "
-                      "batch recall: %.4f, batch F1: %.4f, lr: %.6f" %
-                      (abs_step, epoch, step + 1, loss, batch_metrics['IOU'], batch_metrics['Accuracy'], batch_metrics['Precision'],
-                       batch_metrics['Recall'], batch_metrics['F1'], optimizer.param_groups[0]["lr"]))
-                print('predicted: ', torch.max(logits.data, -1)[1])
-                print('ground truths: ', labels)
-            if abs_step % eval_steps == 0:  # evaluate model every eval_steps batches
-                eval_metrics = evaluate(net, dataloaders['eval'], loss_fn, config)
-                if eval_metrics[1]['macro']['IOU'] > BEST_IOU:
-                    if len(local_device_ids) > 1:
-                        torch.save(net.module.state_dict(), "%s/best.pth" % (save_path))
-                    else:
-                        torch.save(net.state_dict(), "%s/best.pth" % (save_path))
-                    BEST_IOU = eval_metrics[1]['macro']['IOU']
+                if abs_step % train_metrics_steps == 0:
+                    batch_metrics = get_mean_metrics(
+                        logits=logits, labels=labels, unk_masks=None, n_classes=num_classes, loss=loss, epoch=epoch,
+                        step=step)
+                    write_mean_summaries(writer, batch_metrics, abs_step, mode="train", optimizer=optimizer)
+                    print("abs_step: %d, epoch: %d, step: %5d, loss: %.7f, batch_iou: %.4f, batch accuracy: %.4f, batch precision: %.4f, "
+                        "batch recall: %.4f, batch F1: %.4f, lr: %.6f" %
+                        (abs_step, epoch, step + 1, loss, batch_metrics['IOU'], batch_metrics['Accuracy'], batch_metrics['Precision'],
+                        batch_metrics['Recall'], batch_metrics['F1'], optimizer.param_groups[0]["lr"]))
+                    print('predicted: ', torch.max(logits.data, -1)[1])
+                    print('ground truths: ', labels)
+                if abs_step % eval_steps == 0:  # evaluate model every eval_steps batches
+                    eval_metrics = evaluate(net, dataloaders['eval'], loss_fn, config)
+                    if eval_metrics[1]['macro']['IOU'] > BEST_IOU:
+                        if len(local_device_ids) > 1:
+                            torch.save(net.module.state_dict(), "%s/best.pth" % (save_path))
+                        else:
+                            torch.save(net.state_dict(), "%s/best.pth" % (save_path))
+                        BEST_IOU = eval_metrics[1]['macro']['IOU']
 
-                write_mean_summaries(writer, eval_metrics[1]['micro'], abs_step, mode="eval_micro", optimizer=None)
-                write_mean_summaries(writer, eval_metrics[1]['macro'], abs_step, mode="eval_macro", optimizer=None)
-                write_class_summaries(writer, [eval_metrics[0], eval_metrics[1]['class']], abs_step, mode="eval", optimizer=None)
-                net.train()
+                    write_mean_summaries(writer, eval_metrics[1]['micro'], abs_step, mode="eval_micro", optimizer=None)
+                    write_mean_summaries(writer, eval_metrics[1]['macro'], abs_step, mode="eval_macro", optimizer=None)
+                    write_class_summaries(writer, [eval_metrics[0], eval_metrics[1]['class']], abs_step, mode="eval", optimizer=None)
+                    net.train()
+                pbar.update(1)
+        torch.mps.empty_cache()
 
+def load_and_evaluate(net, dataloaders, config, device):
+    num_classes = config['MODEL']['num_classes']
+    save_path = config['CHECKPOINT']["save_path"]
+    checkpoint = config['CHECKPOINT']["load_from_checkpoint"]
+    local_device_ids = config['local_device_ids']
+
+    if checkpoint:
+        load_from_checkpoint(net, checkpoint, partial_restore=False)
+    print("Loaded checkpoint from: ", checkpoint)
+
+    if len(local_device_ids) > 1:
+        net = nn.DataParallel(net, device_ids=local_device_ids)
+    net.to(device)
+
+    loss_fn = {'all': get_loss(config, device, reduction=None),
+               'mean': get_loss(config, device, reduction="mean")}
+
+    writer = SummaryWriter(save_path)
+
+    net.eval()
+    eval_metrics = evaluate(net, dataloaders['eval'], loss_fn, config)
+
+    write_mean_summaries(writer, eval_metrics[1]['micro'], 0, mode="eval_micro", optimizer=None)
+    write_mean_summaries(writer, eval_metrics[1]['macro'], 0, mode="eval_macro", optimizer=None)
+    write_class_summaries(writer, [eval_metrics[0], eval_metrics[1]['class']], 0, mode="eval", optimizer=None)
+
+    print("Evaluation completed.")
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-    parser.add_argument('--config', help='configuration (.yaml) file to use')
+    parser.add_argument('--config_file', help='configuration (.yaml) file to use')
     parser.add_argument('--device', nargs='+', default=[0, 1], type=int,
                         help='gpu ids to use')
     parser.add_argument('--lin', action='store_true',
                          help='train linear classifier only')
 
     args = parser.parse_args()
-    config_file = args.config
+    config_file = args.config_file
     device_ids = args.device
     lin_cls = args.lin
 
-    device = get_device(device_ids, allow_cpu=False)
+    device = get_device(device_ids, allow_cpu=True)  # Allow CPU for apple silicon compatibility
 
     config = read_yaml(config_file)
     config['local_device_ids'] = device_ids
@@ -215,3 +251,5 @@ if __name__ == "__main__":
     net = get_model(config, device)
 
     train_and_evaluate(net, dataloaders, config, device)
+    # load_and_evaluate(net, dataloaders, config, device)
+    

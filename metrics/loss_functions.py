@@ -5,6 +5,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 from utils.config_files_utils import get_params_values
 from copy import deepcopy
+from utils.torch_utils import DEVICE
 
 
 def get_loss(config, device, reduction='mean'):
@@ -47,7 +48,7 @@ def get_loss(config, device, reduction='mean'):
         if loss_config['class_weights'] not in [None, {}]:
             for key in loss_config['class_weights']:
                 weight[key] = loss_config['class_weights'][key]
-        return torch.nn.CrossEntropyLoss(weight=weight, reduction=reduction)
+        return torch.nn.CrossEntropyLoss(weight=weight, reduction=reduction).to(device)
     
     # Masked Cross-Entropy Loss -----------------------------------------------------------
     elif loss_config['loss_function'] == 'masked_cross_entropy':
@@ -181,7 +182,7 @@ class MaskedCrossEntropyLoss(torch.nn.Module):
         else:
             masked_logits_flat = logits.reshape(-1, logits.size(-1))  # (N*H*W x Nclasses)
             masked_target_flat = target.reshape(-1, 1).to(torch.int64)  # (N*H*W x 1)
-        masked_log_probs_flat = torch.nn.functional.log_softmax(masked_logits_flat)  # (N*H*W x Nclasses)
+        masked_log_probs_flat = torch.nn.functional.log_softmax(masked_logits_flat, dim=1)  # (N*H*W x Nclasses)
         masked_losses_flat = -torch.gather(masked_log_probs_flat, dim=1, index=masked_target_flat)  # (N*H*W x 1)
         if self.mean:
             return masked_losses_flat.mean()
@@ -276,7 +277,7 @@ class MaskedDiceLoss(nn.Module):
             target = target[mask]
             logits = logits[mask.repeat(1, logits.shape[-1])].reshape(-1, logits.shape[-1])
 
-        target_onehot = torch.eye(logits.shape[-1])[target].to(torch.float32).cuda()  # .permute(0,3,1,2).float().cuda()
+        target_onehot = torch.eye(logits.shape[-1])[target].to(torch.float32).to(DEVICE)  # .permute(0,3,1,2).float().cuda()
         predicted_prob = F.softmax(logits, dim=-1)
 
         inter = (predicted_prob * target_onehot).sum(dim=-1)
