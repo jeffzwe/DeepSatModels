@@ -8,6 +8,7 @@ import argparse
 import json
 import rasterio
 from rasterio.enums import Resampling
+from tqdm import tqdm
 
 def get_doy(date):
     date = str(date)
@@ -167,8 +168,7 @@ if __name__ == "__main__":
 
     meta_patch = gpd.read_file(os.path.join(rootdir, "metadata.geojson"))
            
-    for i in range(meta_patch.shape[0]):
-        print('doing file %d of %d' % (i, meta_patch.shape[0]))
+    for i in tqdm(range(meta_patch.shape[0]), desc='Processing patches', unit='patch'):
         img = np.load(os.path.join(rootdir, 'DATA_S2/S2_%d.npy' % meta_patch['ID_PATCH'].iloc[i]))
         lab = np.load(os.path.join(rootdir, 'ANNOTATIONS/TARGET_%d.npy' % meta_patch['ID_PATCH'].iloc[i]))
         dates = json.loads(meta_patch['dates-S2'].iloc[i])

@@ -55,11 +55,12 @@ SOLVER:
   num_cycles: 1
   reset_lr: True   # resets lr to base value when loading pretrained model
   weight_decay: 0.000
+  early_classification: True
 
 CHECKPOINT:
   load_from_checkpoint:
   partial_restore: False
-  save_path: 'models/saved_models/PASTIS_LOW/TSViT-S_fold1.exp'
+  save_path: 'models/saved_models/PASTIS_LOW/TSViT-S_fold1.early'
   train_metrics_steps: 250
   eval_steps: 2000
   save_steps: 20000000000
