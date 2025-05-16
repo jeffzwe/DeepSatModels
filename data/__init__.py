@@ -20,7 +20,6 @@ def get_dataloaders(config):
     train_config['bidir_input'] = model_config['architecture'] == "ConvBiRNN"
     eval_config  = config['DATASETS']['eval']
     eval_config['bidir_input'] = model_config['architecture'] == "ConvBiRNN"
-    solver_config = config['SOLVER']
     dataloaders = {}
     
     # TRAIN data -------------------------------------------------------------------------------------------------------
@@ -35,7 +34,7 @@ def get_dataloaders(config):
         dataloaders['train'] = get_pastis_dataloader(
             paths_file=train_config['paths'], root_dir=train_config['base_dir'],
             transform=PASTIS_segmentation_transform(model_config, is_training=True),
-            batch_size=train_config['batch_size'], shuffle=True, num_workers=train_config['num_workers'], early_classification=solver_config['early_classification'])
+            batch_size=train_config['batch_size'], shuffle=True, num_workers=train_config['num_workers'])
     else:
         dataloaders['train'] = get_france_dataloader(
             paths_file=train_config['paths'], root_dir=train_config['base_dir'],
@@ -54,7 +53,7 @@ def get_dataloaders(config):
         dataloaders['eval'] = get_pastis_dataloader(
             paths_file=eval_config['paths'], root_dir=eval_config['base_dir'],
             transform=PASTIS_segmentation_transform(model_config, is_training=False),
-            batch_size=eval_config['batch_size'], shuffle=False, num_workers=eval_config['num_workers'], early_classification=solver_config['early_classification'])
+            batch_size=eval_config['batch_size'], shuffle=False, num_workers=eval_config['num_workers'])
     else:
         dataloaders['eval'] = get_france_dataloader(
             paths_file=eval_config['paths'], root_dir=eval_config['base_dir'],

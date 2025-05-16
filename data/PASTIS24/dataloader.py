@@ -23,8 +23,8 @@ def get_distr_dataloader(paths_file, root_dir, rank, world_size, transform=None,
 
 
 def get_dataloader(paths_file, root_dir, transform=None, batch_size=32, num_workers=4, shuffle=True,
-                   return_paths=False, my_collate=None, early_classification=False):
-    dataset = SatImDataset(csv_file=paths_file, root_dir=root_dir, transform=transform, return_paths=return_paths, early_classification=early_classification)
+                   return_paths=False, my_collate=None):
+    dataset = SatImDataset(csv_file=paths_file, root_dir=root_dir, transform=transform, return_paths=return_paths)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                                              collate_fn=my_collate)
     return dataloader
@@ -33,7 +33,7 @@ def get_dataloader(paths_file, root_dir, transform=None, batch_size=32, num_work
 class SatImDataset(Dataset):
     """Satellite Images dataset."""
 
-    def __init__(self, csv_file, root_dir, transform=None, multilabel=False, return_paths=False, early_classification=False):
+    def __init__(self, csv_file, root_dir, transform=None, multilabel=False, return_paths=False):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -49,7 +49,6 @@ class SatImDataset(Dataset):
         self.transform = transform
         self.multilabel = multilabel
         self.return_paths = return_paths
-        self.early_classification = early_classification
 
     def __len__(self):
         return len(self.data_paths)
@@ -62,15 +61,6 @@ class SatImDataset(Dataset):
 
         with open(img_name, 'rb') as handle:
             sample = pickle.load(handle, encoding='latin1')
-            
-        if self.early_classification:
-            temp_len = sample['img'].shape[0]
-            random_num = torch.randint(3, temp_len + 1, (1,)).item()
-            sample['img'] = sample['img'][:random_num]
-            sample['doy'] = sample['doy'][:random_num]
-            sample = self.transform(sample)
-            sample['weight_ratio'] = torch.tensor((temp_len - random_num + 1) / temp_len, dtype=torch.float32)
-            return sample
 
         if self.transform:
             sample = self.transform(sample)
